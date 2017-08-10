@@ -8,8 +8,8 @@ using CppAD::AD;
 using namespace std;
 
 // TODO: Set the timestep length and duration
-size_t N = 7;
-double dt = 0.3;
+size_t N = 15;
+double dt = 0.08;
 double ref_v = 60 * 0.44704;
 
 int x_start = 0;
@@ -80,21 +80,21 @@ class FG_eval {
     }
 
     for (int i = 0; i < N; ++i) {
-      fg[0] += 8000 * CppAD::pow(vars[cte_start + i], 2);
-      fg[0] += 4000 * CppAD::pow(vars[epsi_start + i], 2);
-      fg[0] += 10 * CppAD::pow(vars[v_start + i] - ref_v, 2);
+      fg[0] += 6.6 * CppAD::pow(vars[cte_start + i], 2);
+      fg[0] += 6.6 * CppAD::pow(vars[epsi_start + i], 2);
+      fg[0] += 0.06 * CppAD::pow(vars[v_start + i] - ref_v, 2);
     }
 
     for (int i = 0; i < N-1; ++i) {
       //Minimize change-rate.
-      fg[0] += 60000 * CppAD::pow(vars[delta_start + i], 2);
-      fg[0] += 1 * CppAD::pow(vars[a_start + i], 2);   
+      fg[0] += 8950 * CppAD::pow(vars[delta_start + i], 2);
+      fg[0] += 0.04 * CppAD::pow(vars[a_start + i], 2);   
     }
     // Minimize the value gap between sequential actuations.
 
     for (int i = 0; i < N - 2; ++i) {
-      fg[0] += 1500 * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
-      fg[0] += 1 * CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
+      fg[0] += 11500 * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
+      fg[0] += 0.05 * CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
     }
 
   }
@@ -141,9 +141,9 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
       vars_lowerbound[i] = -1.0e+19;
       vars_upperbound[i] = 1.0e+19;
   }
-/*  for (int i = v_start; i < cte_start; i++) {
-      vars_lowerbound[i] = -3.0;
-      vars_upperbound[i] = 3.0;
+/*  for (int i = cte_start; i < psi_start; i++) {
+      vars_lowerbound[i] = -1.2;
+      vars_upperbound[i] = 1.2;
   }*/
   for (int i = delta_start; i < a_start; i++) {
       vars_lowerbound[i] = -0.436332;

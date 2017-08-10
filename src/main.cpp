@@ -119,9 +119,11 @@ int main() {
           std::vector<double> control;
           double px_d = v*latency;
           double py_d = 0.0;
-          double psi_d = v*steer_value/Lf*latency;
+          double psi_d = -v*steer_value/Lf*latency;
           double v_d = v+throttle_value*latency;
-          state << px_d, py_d, psi_d, v_d, cte, epsi;
+          double cte_d = polyeval(coeffs, px_d);
+          double epsi_d = atan(coeffs[1]+2*coeffs[2]*px_d+3*coeffs[3]*pow(px_d,2))-psi_d;
+          state << px_d, py_d, psi_d, v_d, cte_d, epsi_d;
           control = mpc.Solve(state, coeffs);
 
           steer_value = - control[0]/deg2rad(25);
