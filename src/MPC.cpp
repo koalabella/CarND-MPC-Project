@@ -8,9 +8,9 @@ using CppAD::AD;
 using namespace std;
 
 // TODO: Set the timestep length and duration
-size_t N = 15;
-double dt = 0.08;
-double ref_v = 60 * 0.44704;
+size_t N = 10;
+double dt = 0.1;
+double ref_v = 40;
 
 int x_start = 0;
 int y_start = N;
@@ -80,21 +80,21 @@ class FG_eval {
     }
 
     for (int i = 0; i < N; ++i) {
-      fg[0] += 6.6 * CppAD::pow(vars[cte_start + i], 2);
-      fg[0] += 6.6 * CppAD::pow(vars[epsi_start + i], 2);
-      fg[0] += 0.06 * CppAD::pow(vars[v_start + i] - ref_v, 2);
+      fg[0] += 1 * CppAD::pow(vars[cte_start + i], 2);
+      fg[0] += 10 * CppAD::pow(vars[epsi_start + i], 2);
+      fg[0] += 1 * CppAD::pow(vars[v_start + i] - ref_v, 2);
     }
 
     for (int i = 0; i < N-1; ++i) {
       //Minimize change-rate.
-      fg[0] += 8950 * CppAD::pow(vars[delta_start + i], 2);
-      fg[0] += 0.04 * CppAD::pow(vars[a_start + i], 2);   
+      fg[0] += 100 * CppAD::pow(vars[delta_start + i], 2);
+      fg[0] += 5 * CppAD::pow(vars[a_start + i], 2);   
     }
     // Minimize the value gap between sequential actuations.
 
     for (int i = 0; i < N - 2; ++i) {
-      fg[0] += 11500 * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
-      fg[0] += 0.05 * CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
+      fg[0] += 300 * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
+      fg[0] += 10 * CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
     }
 
   }
@@ -103,7 +103,10 @@ class FG_eval {
 //
 // MPC class definition implementation.
 //
-MPC::MPC() {}
+MPC::MPC() {
+  prevDelta = 0;
+  prevA = 0;
+}
 MPC::~MPC() {}
 
 vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
@@ -141,18 +144,20 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
       vars_lowerbound[i] = -1.0e+19;
       vars_upperbound[i] = 1.0e+19;
   }
-/*  for (int i = cte_start; i < psi_start; i++) {
-      vars_lowerbound[i] = -1.2;
-      vars_upperbound[i] = 1.2;
-  }*/
-  for (int i = delta_start; i < a_start; i++) {
+  for (int i = delta_start + 1; i < a_start; i++) {
       vars_lowerbound[i] = -0.436332;
       vars_upperbound[i] = 0.436332 ;
-  }//x,y limits
-  for (int i = a_start; i < a_start+N-1; i++) {
+  }
+  vars_lowerbound[delta_start]=prevDelta;
+  vars_upperbound[delta_start]=prevDelta;
+
+  for (int i = a_start + 1; i < a_start+N-1; i++) {
       vars_lowerbound[i] = -1.0;
       vars_upperbound[i] = 1.0;
-  }//x,y limits
+  }
+  vars_lowerbound[a_start]=prevA;
+  vars_upperbound[a_start]=prevA;
+
   // Lower and upper limits for the constraints
   // Should be 0 besides initial state.
   Dvector constraints_lowerbound(n_constraints);
@@ -209,16 +214,13 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // Cost
   auto cost = solution.obj_value;
   std::cout << "Cost " << cost << std::endl;
-  //cout << "Solution: " << solution.x << endl;
 
-  // TODO: Return the first actuator values. The variables can be accessed with
-  // `solution.x[i]`.
-  //
-  // {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0}
-  // creates a 2 element double vector.
+  prevDelta=solution.x[delta_start+1];
+  prevA=solution.x[a_start+1];
+
   vector<double> predict;
   predict.push_back(solution.x[delta_start]);
-  predict.push_back(solution.x[a_start]);
+  predict.push_back(solution.x[a_start+1]);
   for (int i=1; i<N; ++i){
     predict.push_back(solution.x[x_start + i]);
     predict.push_back(solution.x[y_start + i]);
