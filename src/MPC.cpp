@@ -82,7 +82,7 @@ class FG_eval {
     //cost 1
     for (int i = 0; i < N; ++i) {
       fg[0] += 1 * CppAD::pow(vars[cte_start + i], 2);
-      fg[0] += 1 * CppAD::pow(vars[epsi_start + i], 2);
+      fg[0] += 2 * CppAD::pow(vars[epsi_start + i], 2);
       fg[0] += 1 * CppAD::pow(vars[v_start + i] - ref_v, 2);
     }
 
@@ -238,7 +238,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   prevA=solution.x[a_start+1];
 
   vector<double> predict;
-  predict.push_back(solution.x[delta_start]);
+  predict.push_back(solution.x[delta_start+1]);
   predict.push_back(solution.x[a_start+1]);
   for (int i=1; i<N; ++i){
     predict.push_back(solution.x[x_start + i]);
